@@ -1,0 +1,441 @@
+---
+title: "Daily_Weather"
+author: "Satya Priyanka Ponduru"
+date: "2024-04-17"
+output: html_document
+---
+
+```{r}
+library(tidyr)
+library(tseries)
+library(ggplot2)
+library(forecast)
+library(lmtest)
+library(fable)
+library(reshape2)
+
+```
+
+```{r}
+data <- read.csv("daily_weather.csv")
+summary(data)
+head(data)
+```
+```{r}
+variable_names <- names(data)
+
+# Plot histograms for each variable
+hist_plots <- lapply(variable_names, function(col) {
+  ggplot(data, aes(x = .data[[col]])) +
+    geom_histogram(fill = "skyblue", color = "black", bins = 20) +
+    labs(x = col, y = "Frequency", title = paste("Histogram of", col))
+})
+print(hist_plots)
+
+# Plot density plots for each variable
+density_plots <- lapply(variable_names, function(col) {
+  ggplot(data, aes(x = .data[[col]])) +
+    geom_density(fill = "skyblue", color = "black") +
+    labs(x = col, y = "Density", title = paste("Density Plot of", col))
+})
+print(density_plots)
+
+```
+
+```{r}
+library(corrplot)
+
+# Calculate the correlation matrix
+corr_matrix <- cor(data)
+
+# Generate the correlation heatmap
+corrplot(corr_matrix, method = "color", type = "lower",
+         order = "hclust", tl.cол = "black", tl.srt = 45,
+         addCoef.col = "black", number.cex = 0.7)
+```
+
+
+```{r}
+
+# Correlation matrix
+correlation_matrix <- cor(data)
+correlation_long <- melt(correlation_matrix)
+
+# Plot correlation matrix as a heat map
+ggplot(correlation_long, aes(Var2, Var1, fill = value)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1, 1), space = "Lab", 
+                       name="Correlation") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, 
+                                   size = 12, hjust = 1)) +
+  coord_fixed()
+```
+
+
+```{r}
+data <- na.omit(data)
+
+air_pressure_9am <- data$air_pressure_9am
+air_temp_9am <- data$air_temp_9am
+avg_wind_direction_9am <- data$avg_wind_direction_9am
+avg_wind_speed_9am <- data$avg_wind_speed_9am
+max_wind_direction_9am <- data$max_wind_direction_9am
+max_wind_speed_9am <- data$max_wind_speed_9am
+rain_accumulation_9am <- data$rain_accumulation_9am
+rain_duration_9am <- data$rain_duration_9am
+relative_humidity_9am <- data$relative_humidity_9am
+relative_humidity_3pm <- data$relative_humidity_3pm
+
+N <- length(relative_humidity_3pm)
+
+#Standardizing the data and converting to time series object
+air_pressure_9am <- air_pressure_9am - mean(air_pressure_9am)
+air_pressure_9am <- ts(air_pressure_9am, start = 1, end = N)
+
+air_temp_9am <- air_temp_9am - mean(air_temp_9am)
+air_temp_9am <- ts(air_temp_9am, start = 1, end = N)
+
+avg_wind_direction_9am <- avg_wind_direction_9am - mean(avg_wind_direction_9am)
+avg_wind_direction_9am <- ts(avg_wind_direction_9am, start = 1, end = N)
+
+avg_wind_speed_9am <- avg_wind_speed_9am - mean(avg_wind_speed_9am)
+avg_wind_speed_9am <- ts(avg_wind_speed_9am, start = 1, end = N)
+
+max_wind_direction_9am <- max_wind_direction_9am - mean(max_wind_direction_9am)
+max_wind_direction_9am <- ts(max_wind_direction_9am, start = 1, end = N)
+
+max_wind_speed_9am <- max_wind_speed_9am - mean(max_wind_speed_9am)
+max_wind_speed_9am <- ts(max_wind_speed_9am, start = 1, end = N)
+
+rain_accumulation_9am <- rain_accumulation_9am - mean(rain_accumulation_9am)
+rain_accumulation_9am <- ts(rain_accumulation_9am, start = 1, end = N)
+
+rain_duration_9am <- rain_duration_9am - mean(rain_duration_9am)
+rain_duration_9am <- ts(rain_duration_9am, start = 1, end = N)
+
+relative_humidity_9am <- relative_humidity_9am - mean(relative_humidity_9am)
+relative_humidity_9am <- ts(relative_humidity_9am, start = 1, end = N)
+
+relative_humidity_3pm <- relative_humidity_3pm - mean(relative_humidity_3pm)
+relative_humidity_3pm <- ts(relative_humidity_3pm, start = 1, end = N)
+
+
+plot(air_pressure_9am, xlab="days", ylab = "air_pressure", main = "Air Pressure at 9AM")
+
+plot(air_temp_9am, xlab="days", ylab = "air_temperature", main = "Air Temperature at 9AM")
+
+plot(avg_wind_direction_9am, xlab="days", ylab = "avg_wind_direction_9am", main = "Average Wind Direction at 9AM")
+
+plot(avg_wind_speed_9am, xlab="days", ylab = "avg_wind_speed_9am", main = "Average Wind Speed at 9AM")
+
+plot(max_wind_direction_9am, xlab="days", ylab = "max_wind_direction_9am", main = "Max wind direction at 9AM")
+
+plot(max_wind_speed_9am, xlab="days", ylab = "max_wind_speed_9am", main = "Max Wind Speed at 9AM")
+
+plot(rain_accumulation_9am, xlab="days", ylab = "rain_accumulation_9am", main = "Rain Accumulation at 9AM")
+
+plot(rain_duration_9am, xlab="days", ylab = "rain_duration_9am", main = "Rain Duration at 9AM")
+
+plot(relative_humidity_9am, xlab="days", ylab = "relative_humidity_9am", main = "Relative Humidity at 9AM")
+
+plot(relative_humidity_3pm, xlab="days", ylab = "relative_humidity_3pm", main = "Relative Humidity at 3PM")
+
+```
+
+```{r}
+acf(air_pressure_9am)
+acf(air_temp_9am)
+acf(avg_wind_direction_9am)
+acf(avg_wind_speed_9am)
+acf(max_wind_direction_9am)
+acf(max_wind_speed_9am)
+acf(rain_accumulation_9am)
+acf(rain_duration_9am)
+acf(relative_humidity_9am)
+acf(relative_humidity_3pm)
+
+```
+
+```{r}
+#Differencing the variables to make it stationary
+diff_air_pressure_9am <- diff(air_pressure_9am)
+plot(diff_air_pressure_9am, xlab="days", ylab = "air_pressure_9am", main = "Differenced Air Pressure at 9am Plot")
+
+diff_air_temp_9am <- diff(air_temp_9am)
+plot(diff_air_temp_9am, xlab="days", ylab = "air_temp_9am", main = "Differenced Air Temperature at 9am Plot")
+
+diff_avg_wind_direction_9am <- diff(avg_wind_direction_9am)
+plot(diff_avg_wind_direction_9am, xlab="days", ylab = "avg_wind_direction_9am", main = "Differenced Average Wind Direction at 9am Plot")
+
+diff_avg_wind_speed_9am <- diff(avg_wind_speed_9am)
+plot(diff_avg_wind_speed_9am, xlab="days", ylab = "avg_wind_speed_9am", main = "Differenced Average Wind Speed at 9am Plot")
+
+diff_max_wind_direction_9am <- diff(max_wind_direction_9am)
+plot(diff_max_wind_direction_9am, xlab="days", ylab = "max_wind_direction_9am", main = "Differenced Maximum Wind Direction at 9 am Plot")
+
+diff_max_wind_speed_9am <- diff(max_wind_speed_9am)
+plot(diff_max_wind_speed_9am, xlab="days", ylab = "max_wind_speed_9am", main = "Differenced Max Wind Speed at 9am Plot")
+
+diff_rain_accumulation_9am <- diff(rain_accumulation_9am)
+plot(diff_rain_accumulation_9am, xlab="days", ylab = "rain_accumulation_9am", main = "Differenced Rain Accumulation at 9am Plot")
+
+diff_rain_duration_9am <- diff(rain_duration_9am)
+plot(diff_rain_duration_9am, xlab="days", ylab = "rain_duration_9am", main = "Differenced Rain Duration at 9am Plot")
+
+diff_relative_humidity_9am <- diff(relative_humidity_9am)
+plot(diff_relative_humidity_9am, xlab="days", ylab = "relative_humidity_9am", main = "Differenced Relative Humidity at 9am Plot")
+
+diff_relative_humidity_3pm <- diff(relative_humidity_3pm)
+plot(diff_relative_humidity_3pm, xlab="days", ylab = "relative_humidity_3pm", main = "Differenced Relative Humidity at 3pm Plot")
+
+```
+
+```{r}
+#suppressWarnings({
+adf.test(diff_air_pressure_9am)
+adf.test(diff_air_temp_9am)
+adf.test(diff_avg_wind_direction_9am)
+adf.test(diff_avg_wind_speed_9am)
+adf.test(diff_max_wind_direction_9am)
+adf.test(diff_max_wind_speed_9am)
+adf.test(diff_rain_accumulation_9am)
+adf.test(diff_rain_duration_9am)
+adf.test(diff_relative_humidity_9am)
+adf.test(diff_relative_humidity_3pm)
+#})
+```
+
+```{r}
+#ACF
+acf(diff_air_pressure_9am)
+acf(diff_air_temp_9am)
+acf(diff_avg_wind_direction_9am)
+acf(diff_avg_wind_speed_9am)
+acf(diff_max_wind_direction_9am)
+acf(diff_max_wind_speed_9am)
+acf(diff_rain_accumulation_9am)
+acf(diff_rain_duration_9am)
+acf(diff_relative_humidity_9am)
+acf(diff_relative_humidity_3pm)
+
+```
+
+```{r}
+#PACF
+pacf(diff_air_pressure_9am)
+pacf(diff_air_temp_9am)
+pacf(diff_avg_wind_direction_9am)
+pacf(diff_avg_wind_speed_9am)
+pacf(diff_max_wind_direction_9am)
+pacf(diff_max_wind_speed_9am)
+pacf(diff_rain_accumulation_9am)
+pacf(diff_rain_duration_9am)
+pacf(diff_relative_humidity_9am)
+pacf(diff_relative_humidity_3pm)
+
+```
+
+```{r}
+#CCF
+ccf(diff_relative_humidity_3pm, diff_air_pressure_9am)
+ccf(diff_relative_humidity_3pm, diff_air_temp_9am)
+ccf(diff_relative_humidity_3pm, diff_avg_wind_direction_9am)
+ccf(diff_relative_humidity_3pm, diff_avg_wind_speed_9am)
+ccf(diff_relative_humidity_3pm, diff_max_wind_direction_9am)
+ccf(diff_relative_humidity_3pm, diff_max_wind_speed_9am)
+ccf(diff_relative_humidity_3pm, diff_rain_accumulation_9am)
+ccf(diff_relative_humidity_3pm, diff_rain_duration_9am)
+ccf(diff_relative_humidity_3pm, diff_relative_humidity_9am)
+```
+
+```{r}
+spectrum(diff_air_pressure_9am, log='no', xlab='Frequencies',
+         ylab='Power',
+         main='Periodogram Air Pressure at 9am')
+
+spectrum(diff_air_temp_9am, log='no', xlab='Frequencies',
+         ylab='Power',
+         main='Periodogram Air Temperature at 9am')
+
+spectrum(diff_avg_wind_direction_9am, log='no', xlab='Frequencies',
+         ylab='Power',
+         main='Periodogram Average Wind Direction at 9am')
+
+spectrum(diff_avg_wind_speed_9am, log='no', xlab='Frequencies',
+         ylab='Power',
+         main='Periodogram Average Wind Speed at 9am')
+
+spectrum(diff_max_wind_direction_9am, log='no', xlab='Frequencies',
+         ylab='Power',
+         main='Periodogram Max Wind Direction at 9am')
+
+spectrum(diff_max_wind_speed_9am, log='no', xlab='Frequencies',
+         ylab='Power',
+         main='Periodogram Max Wind Speed at 9am')
+
+spectrum(diff_rain_accumulation_9am, log='no', xlab='Frequencies',
+         ylab='Power',
+         main='Periodogram Rain Accumulation at 9am')
+
+spectrum(diff_rain_duration_9am, log='no', xlab='Frequencies',
+         ylab='Power',
+         main='Periodogram Rain Duration at 9am')
+
+spectrum(diff_relative_humidity_9am, log='no', xlab='Frequencies',
+         ylab='Power',
+         main='Periodogram Relative Humidity at 9am')
+
+spectrum(diff_relative_humidity_3pm, log='no', xlab='Frequencies',
+         ylab='Power',
+         main='Periodogram Relative Humidity at 3pm')
+```
+
+```{r}
+suppressWarnings({
+
+#Based on observations from ACF and CCF creating new lagged inputs and output
+air_pressure_9am_lag1 <- filter(diff_air_pressure_9am, c(0,1), sides=1)
+air_temp_9am_lag1 <- filter(diff_air_temp_9am, c(0,1), sides=1)
+avg_wind_direction_9am_lag1 <- filter(diff_avg_wind_direction_9am, c(0,1), sides=1)
+avg_wind_speed_9am_lag1 <- filter(diff_avg_wind_speed_9am, c(0,1), sides=1)
+max_wind_direction_9am_lag1 <- filter(diff_max_wind_direction_9am, c(0,1), sides=1)
+max_wind_speed_9am_lag1 <- filter(diff_max_wind_speed_9am, c(0,1), sides=1)
+rain_accumulation_9am_lag1 <- filter(diff_rain_accumulation_9am, c(0,1), sides=1)
+rain_duration_9am_lag1 <- filter(diff_rain_duration_9am, c(0,1), sides=1)
+relative_humidity_9am_lag1 <- filter(diff_relative_humidity_9am, c(0,1), sides=1)
+relative_humidity_3pm_lag1 <- filter(diff_relative_humidity_3pm, c(0,1), sides=1)
+diff_air_pressure_9am <- diff_air_pressure_9am[1:N]
+air_pressure_9am_lag1 <- air_pressure_9am_lag1[1:N]
+diff_air_temp_9am <- diff_air_temp_9am[1:N]
+air_temp_9am_lag1 <- air_temp_9am_lag1[1:N]
+diff_avg_wind_direction_9am <- diff_avg_wind_direction_9am[1:N]
+avg_wind_direction_9am_lag1 <- avg_wind_direction_9am_lag1[1:N]
+diff_avg_wind_speed_9am <- diff_avg_wind_speed_9am[1:N]
+avg_wind_speed_9am_lag1 <- avg_wind_speed_9am_lag1[1:N]
+diff_max_wind_direction_9am <- diff_max_wind_direction_9am[1:N]
+max_wind_direction_9am_lag1 <- max_wind_direction_9am_lag1[1:N]
+diff_max_wind_speed_9am <- diff_max_wind_speed_9am[1:N]
+max_wind_speed_9am_lag1 <- max_wind_speed_9am_lag1[1:N]
+diff_rain_accumulation_9am <- diff_rain_accumulation_9am[1:N]
+rain_accumulation_9am_lag1 <- rain_accumulation_9am_lag1[1:N]
+diff_rain_duration_9am <- diff_rain_duration_9am[1:N]
+rain_duration_9am_lag1 <- rain_duration_9am_lag1[1:N]
+diff_relative_humidity_9am <- diff_relative_humidity_9am[1:N]
+relative_humidity_9am_lag1 <- relative_humidity_9am_lag1[1:N]
+diff_relative_humidity_3pm <- diff_relative_humidity_3pm[1:N]
+relative_humidity_3pm_lag1 <- relative_humidity_3pm_lag1[1:N]
+
+data_arima1 <- cbind(diff_avg_wind_direction_9am, diff_avg_wind_speed_9am, diff_max_wind_speed_9am, diff_rain_duration_9am, diff_rain_accumulation_9am, diff_relative_humidity_9am, diff_relative_humidity_3pm)
+
+})
+```
+
+
+```{r}
+suppressWarnings(
+
+for(i in 1:5) {
+  for (j in 1:5){
+    simple_model <- arima(diff_relative_humidity_3pm[0:1000], order=c(i,0,j))
+    cat()
+    cat("AIC:", AIC(simple_model), "BIC:", BIC(simple_model), "p:", i, "q:", j,"\n")
+    cat()
+  }
+}
+)
+```
+
+```{r}
+simple_model <- arima(diff_relative_humidity_3pm[0:1000], order=c(2, 0, 3))
+
+AIC(simple_model)
+BIC(simple_model)
+```
+
+```{r}
+humidity_ts <- ts(data$relative_humidity_3pm, start = 1, frequency = 1)
+
+# Build the ARIMA model with exogenous variable (relative humidity at 9 am)
+model <- Arima(humidity_ts[1:1000], order = c(6, 0, 5), xreg = data$relative_humidity_9am[1:1000])
+
+# Forecast relative humidity for observations 1001 to 1050
+forecast <- forecast(model, xreg = data$relative_humidity_9am[1001:1050])
+
+# Extract the forecasted values for relative humidity at 3pm
+forecasted_humidity_3pm <- forecast$mean
+print(forecasted_humidity_3pm)
+
+# Plot the observed data from observations 1000 to 1500
+plot(1000:1051, data$relative_humidity_3pm[1000:1051], type = "l", col = "blue", ylim = c(0, 100),
+     xlab = "Observation", ylab = "Relative Humidity", main = "Forecasted Relative Humidity")
+
+# Add forecasted values to the plot
+lines(1001:1050, forecasted_humidity_3pm, col = "red")
+legend("topleft", legend = c("Observed", "Forecast"), col = c("blue", "red"), lty = 1)
+
+# Get the model residuals
+model_residuals <- residuals(model)
+
+# Plot the residuals
+plot(model_residuals, main = "Model Residuals")
+
+# Box-Ljung test for residual autocorrelation
+Box.test(model_residuals, type = "Ljung-Box")
+
+# ACF plot of the residuals
+acf(model_residuals, main = "ACF of Residuals")
+
+# Spectral analysis of the residuals
+spectrum(model_residuals, main = "Spectral Analysis of Residuals")
+accuracy <- accuracy(forecast)
+print(accuracy)
+
+```
+```{r}
+
+for (p in 1:7) {
+  for (q in 1:7) {
+    # Build the ARIMA model
+    model <- Arima(humidity_ts[1:1000], order = c(p, 0, q), xreg = data$relative_humidity_9am[1:1000])
+    
+    # Forecast relative humidity for observations 1001 to 1050
+    forecast <- forecast(model, xreg = data$relative_humidity_9am[1001:1050])
+    
+    # Calculate accuracy metrics
+    accuracy <- accuracy(forecast)
+    
+    # Print results
+    cat("Order (p, q):", p, ",", q, "\t")
+    cat("AIC:", AIC(model), "BIC:", BIC(model), "\n")
+    cat()
+  }
+}
+```
+
+```{r}
+# Plot the observed data from observations 1000 to 1500
+plot(1000:1051, diff_relative_humidity_3pm[1000:1051], type = "l", col = "blue", ylim = c(-50, 100),
+     xlab = "Observation", ylab = "Relative Humidity", main = "Forecasted Relative Humidity")
+lines(1001:1050, forecasted_humidity_3pm, col = "red")
+legend("topleft", legend = c("Observed", "Forecast"), col = c("blue", "red"), lty = 1)
+
+# Get the model residuals
+model_residuals <- residuals(model)
+
+# Plot the residuals
+plot(model_residuals, main = "Model Residuals")
+
+# Box-Ljung test for residual autocorrelation
+Box.test(model_residuals, type = "Ljung-Box")
+
+# ACF plot of the residuals
+acf(model_residuals, main = "ACF of Residuals")
+
+# Spectral analysis of the residuals
+spectrum(model_residuals, main = "Spectral Analysis of Residuals")
+accuracy <- accuracy(forecast)
+print(accuracy)
+
+```

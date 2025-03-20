@@ -1,0 +1,462 @@
+
+
+```{r}
+library(tidyr)
+library(tseries)
+library(ggplot2)
+library(forecast)
+library(lmtest)
+library(fable)
+```
+
+```{r}
+data_ett <- read.csv("ETTh1.csv")
+
+summary(data_ett)
+
+```
+
+```{r}
+data_ett <- na.omit(data_ett)
+
+daily_data_ett <- aggregate(data_ett[,2:8], by = list(date = as.Date(data_ett$date)), FUN = mean)
+
+oil_temp <- daily_data_ett$OT
+high_fl <- daily_data_ett$HUFL
+high_ll <- daily_data_ett$HULL
+mean_fl <- daily_data_ett$MUFL
+mean_ll <- daily_data_ett$MULL
+low_fl <- daily_data_ett$LUFL
+low_ll <- daily_data_ett$LULL
+
+N <- length(oil_temp)
+
+#Standardizing the data and converting to time series object
+oil_temp <- oil_temp - mean(oil_temp)
+oil_temp <- ts(oil_temp, start = 1, end = N)
+high_fl <- high_fl - mean(high_fl)
+high_fl <- ts(high_fl, start = 1, end = N)
+high_ll <- high_ll - mean(high_ll)
+high_ll <- ts(high_ll, start = 1, end = N)
+mean_fl <- mean_fl - mean(mean_fl)
+mean_fl <- ts(mean_fl, start = 1, end = N)
+mean_ll <- mean_ll - mean(mean_ll)
+mean_ll <- ts(mean_ll, start = 1, end = N)
+low_fl <- low_fl - mean(low_fl)
+low_fl <- ts(low_fl, start = 1, end = N)
+low_ll <- low_ll - mean(low_ll)
+low_ll <- ts(low_ll, start = 1, end = N)
+
+#Plotting the time series to check for seasonality
+plot(oil_temp, xlab="days", ylab = "oil_temp", main = "Oil Temperature Plot")
+
+plot(high_fl, xlab="days", ylab = "high_fl", main = "High Reading at Full Load")
+
+plot(high_ll, xlab="days", ylab = "high_ll", main = "High Reading at Low Load")
+
+plot(mean_fl, xlab="days", ylab = "mean_fl", main = "Mean Reading at Full Load")
+
+plot(mean_ll, xlab="days", ylab = "mean_ll", main = "Mean Reading at Full Load")
+
+plot(low_fl, xlab="days", ylab = "low_fl", main = "Low Reading at Full Load")
+
+plot(low_ll, xlab="days", ylab = "low_ll", main = "Low Reading at Full Load")
+
+
+
+```
+
+```{r}
+acf(oil_temp)
+acf(high_fl)
+acf(high_ll)
+acf(mean_fl)
+acf(mean_ll)
+acf(low_fl)
+acf(low_ll)
+#Checking for Stationarity
+#Use above plots
+
+```
+
+
+```{r}
+#Differencing the variables to make it stationary
+diff_oil_temp <- diff(oil_temp)
+plot(diff_oil_temp, xlab="days", ylab = "oil_temp", main = "Differenced Oil Temperature Plot")
+
+diff_high_fl <- diff(high_fl)
+plot(diff_high_fl, xlab="days", ylab = "high_fl", main = "Differenced High Reading at Useful Load Plot")
+
+diff_high_ll <- diff(high_ll)
+plot(diff_high_ll, xlab="days", ylab = "high_ll", main = "Differenced High Reading at Useless Load Plot")
+
+diff_mean_fl <- diff(mean_fl)
+plot(diff_mean_fl, xlab="days", ylab = "mean_fl", main = "Differenced Mean Reading at Useful Load Plot")
+
+diff_mean_ll <- diff(mean_ll)
+plot(diff_mean_ll, xlab="days", ylab = "mean_ll", main = "Differenced Mean Reading at Useless Load Plot")
+
+diff_low_fl <- diff(low_fl)
+plot(diff_low_fl, xlab="days", ylab = "low_fl", main = "Differenced Low Reading at Useful Load Plot")
+
+diff_low_ll <- diff(low_ll)
+plot(diff_low_ll, xlab="days", ylab = "low_ll", main = "Differenced Low Reading at Useless Load Plot")
+
+```
+```{r}
+adf.test(diff_oil_temp)
+adf.test(diff_high_fl)
+adf.test(diff_high_ll)
+adf.test(diff_mean_fl)
+adf.test(diff_mean_ll)
+adf.test(diff_low_fl)
+adf.test(diff_low_ll)
+
+```
+
+```{r}
+#Summarizing ACF
+acf(diff_oil_temp)
+acf(diff_high_fl)
+acf(diff_high_ll)
+acf(diff_mean_fl)
+acf(diff_mean_ll)
+acf(diff_low_fl)
+acf(diff_low_ll)
+
+```
+
+```{r}
+#Summarizing PACF
+pacf(diff_oil_temp)
+pacf(diff_high_fl)
+pacf(diff_high_ll)
+pacf(diff_mean_fl)
+pacf(diff_mean_ll)
+pacf(diff_low_fl)
+pacf(diff_low_ll)
+
+```
+
+```{r}
+#Summarizing CCF
+ccf(diff_oil_temp, diff_high_fl)
+ccf(diff_oil_temp, diff_high_ll)
+ccf(diff_oil_temp, diff_mean_fl)
+ccf(diff_oil_temp, diff_mean_ll)
+ccf(diff_oil_temp, diff_low_fl)
+ccf(diff_oil_temp, diff_low_ll)
+
+```
+
+
+```{r}
+#Summarizing the Spectral Analysis of each series
+spectrum(diff_oil_temp, log='no', xlab='Frequencies',
+         ylab='Power',
+         main='Periodogram Oil Temperature')
+
+spectrum(diff_high_fl, log='no', xlab='Frequencies',
+         ylab='Power',
+         main='Periodogram High Value at Useful Load')
+
+spectrum(diff_high_ll, log='no', xlab='Frequencies',
+         ylab='Power',
+         main='Periodogram High Value at Useless Load')
+
+spectrum(diff_mean_fl, log='no', xlab='Frequencies',
+         ylab='Power',
+         main='Periodogram Mean Value at Useful Load')
+
+spectrum(diff_mean_ll, log='no', xlab='Frequencies',
+         ylab='Power',
+         main='Periodogram Mean Value at Useless Load')
+
+spectrum(diff_low_fl, log='no', xlab='Frequencies',
+         ylab='Power',
+         main='Periodogram Low Value at Useful Load')
+
+spectrum(diff_low_ll, log='no', xlab='Frequencies',
+         ylab='Power',
+         main='Periodogram Low Value at Useless Load')
+
+```
+```{r}
+#Based on observations from ACF and CCF creating new lagged inputs and output
+oil_temp_lag1 <- filter(diff_oil_temp, c(0,1), sides=1)
+oil_temp_lag2 <- filter(oil_temp_lag1, c(0,1), sides=1)
+oil_temp_lag3 <- filter(oil_temp_lag2, c(0,1), sides=1)
+oil_temp_lag4 <- filter(oil_temp_lag3, c(0,1), sides=1)
+
+high_fl_lag1 <- filter(diff_high_fl, c(0,1), sides=1)
+high_fl_lag2 <- filter(high_fl_lag1, c(0,1), sides=1)
+high_fl_lag3 <- filter(high_fl_lag2, c(0,1), sides=1)
+high_fl_lag4 <- filter(high_fl_lag3, c(0,1), sides=1)
+
+high_ll_lag1 <- filter(diff_high_ll, c(0,1), sides=1)
+high_ll_lag2 <- filter(high_ll_lag1, c(0,1), sides=1)
+high_ll_lag3 <- filter(high_ll_lag2, c(0,1), sides=1)
+high_ll_lag4 <- filter(high_ll_lag3, c(0,1), sides=1)
+
+mean_fl_lag1 <- filter(diff_mean_fl, c(0,1), sides=1)
+mean_fl_lag2 <- filter(mean_fl_lag1, c(0,1), sides=1)
+mean_fl_lag3 <- filter(mean_fl_lag2, c(0,1), sides=1)
+mean_fl_lag4 <- filter(mean_fl_lag3, c(0,1), sides=1)
+
+mean_ll_lag1 <- filter(diff_mean_ll, c(0,1), sides=1)
+mean_ll_lag2 <- filter(mean_ll_lag1, c(0,1), sides=1)
+mean_ll_lag3 <- filter(mean_ll_lag2, c(0,1), sides=1)
+mean_ll_lag4 <- filter(mean_ll_lag3, c(0,1), sides=1)
+
+low_fl_lag1 <- filter(diff_low_fl, c(0,1), sides=1)
+low_fl_lag2 <- filter(low_fl_lag1, c(0,1), sides=1)
+low_fl_lag3 <- filter(low_fl_lag2, c(0,1), sides=1)
+low_fl_lag4 <- filter(low_fl_lag3, c(0,1), sides=1)
+
+low_ll_lag1 <- filter(diff_low_ll, c(0,1), sides=1)
+low_ll_lag2 <- filter(low_ll_lag1, c(0,1), sides=1)
+low_ll_lag3 <- filter(low_ll_lag2, c(0,1), sides=1)
+low_ll_lag4 <- filter(low_ll_lag3, c(0,1), sides=1)
+
+diff_oil_temp <- diff_oil_temp[5:N]
+oil_temp_lag1 <- oil_temp_lag1[5:N]
+oil_temp_lag2 <- oil_temp_lag2[5:N]
+oil_temp_lag3 <- oil_temp_lag3[5:N]
+oil_temp_lag4 <- oil_temp_lag4[5:N]
+
+diff_high_fl <- diff_high_fl[5:N]
+high_fl_lag1 <- high_fl_lag1[5:N]
+high_fl_lag2 <- high_fl_lag2[5:N]
+high_fl_lag3 <- high_fl_lag3[5:N]
+high_fl_lag4 <- high_fl_lag4[5:N]
+
+diff_high_ll <- diff_high_ll[5:N]
+high_ll_lag1 <- high_ll_lag1[5:N]
+high_ll_lag2 <- high_ll_lag2[5:N]
+high_ll_lag3 <- high_ll_lag3[5:N]
+high_ll_lag4 <- high_ll_lag4[5:N]
+
+diff_mean_fl <- diff_mean_fl[5:N]
+mean_fl_lag1 <- mean_fl_lag1[5:N]
+mean_fl_lag2 <- mean_fl_lag2[5:N]
+mean_fl_lag3 <- mean_fl_lag3[5:N]
+mean_fl_lag4 <- mean_fl_lag4[5:N]
+
+diff_mean_ll <- diff_mean_ll[5:N]
+mean_ll_lag1 <- mean_ll_lag1[5:N]
+mean_ll_lag2 <- mean_ll_lag2[5:N]
+mean_ll_lag3 <- mean_ll_lag3[5:N]
+mean_ll_lag4 <- mean_ll_lag4[5:N]
+
+diff_low_fl <- diff_low_fl[5:N]
+low_fl_lag1 <- low_fl_lag1[5:N]
+low_fl_lag2 <- low_fl_lag2[5:N]
+low_fl_lag3 <- low_fl_lag3[5:N]
+low_fl_lag4 <- low_fl_lag4[5:N]
+
+diff_low_ll <- diff_low_ll[5:N]
+low_ll_lag1 <- low_ll_lag1[5:N]
+low_ll_lag2 <- low_ll_lag2[5:N]
+low_ll_lag3 <- low_ll_lag3[5:N]
+low_ll_lag4 <- low_ll_lag4[5:N]
+
+time_prd <- 1:N-5
+sin_pred <- sin(2 * pi * time_prd * (1/365))
+cos_pred <- cos(2 * pi * time_prd * (1/365))
+
+data_arima4 <- cbind(oil_temp_lag1, oil_temp_lag2, oil_temp_lag3, oil_temp_lag4,
+                     high_fl_lag1, high_fl_lag2, high_fl_lag3, high_fl_lag4,
+                     high_ll_lag1, high_ll_lag2, high_ll_lag3, high_ll_lag4,
+                     mean_fl_lag1, mean_fl_lag2, mean_fl_lag3, mean_fl_lag4,
+                     mean_ll_lag1, mean_ll_lag2, mean_ll_lag3, mean_ll_lag4,
+                     low_fl_lag1, low_fl_lag2, low_fl_lag3, low_fl_lag4,
+                     low_ll_lag1, low_ll_lag2, low_ll_lag3, low_ll_lag4, sin_pred, cos_pred)
+
+data_arima3 <- cbind(oil_temp_lag1, oil_temp_lag2, oil_temp_lag3,
+                     high_fl_lag1, high_fl_lag2, high_fl_lag3,
+                     high_ll_lag1, high_ll_lag2, high_ll_lag3,
+                     mean_fl_lag1, mean_fl_lag2, mean_fl_lag3,
+                     mean_ll_lag1, mean_ll_lag2, mean_ll_lag3,
+                     low_fl_lag1, low_fl_lag2, low_fl_lag3,
+                     low_ll_lag1, low_ll_lag2, low_ll_lag3, sin_pred, cos_pred)
+
+data_arima2 <- cbind(oil_temp_lag1, oil_temp_lag2,
+                     high_fl_lag1, high_fl_lag2,
+                     high_ll_lag1, high_ll_lag2,
+                     mean_fl_lag1, mean_fl_lag2,
+                     mean_ll_lag1, mean_ll_lag2,
+                     low_fl_lag1, low_fl_lag2,
+                     low_ll_lag1, low_ll_lag2, sin_pred, cos_pred)
+
+data_arima1 <- cbind(oil_temp_lag1, high_fl_lag1, high_ll_lag1,
+                     mean_fl_lag1, mean_ll_lag1, low_fl_lag1, low_ll_lag1, sin_pred, cos_pred)
+
+```
+
+
+```{r}
+for(i in 1:5) {
+  for (j in 1:5){
+    complex_model_lag4 <- arima(diff_oil_temp[0:700], xreg = data_arima4[0:700,], order=c(i,0,j))
+    pr <- predict(complex_model_lag4, newxreg = data_arima4[701:721,])
+    
+    ts.plot(diff_oil_temp[700:720], pr$pred, lty=1:2, col=c("blue", "red"))
+    legend("topleft", legend = c("Actual", "Predicted"), col = 1:2, lty = 1:2)
+    
+    cat()
+    cat("AIC:", AIC(complex_model_lag4), "BIC:", BIC(complex_model_lag4), "p:", i, "q:", j,"\n")
+    cat()
+  }
+}
+
+```
+
+
+```{r}
+for(i in 1:5) {
+  for (j in 1:5){
+    complex_model_lag3 <- arima(diff_oil_temp[0:700], xreg = data_arima3[0:700,], order=c(i,0,j))
+    pr <- predict(complex_model_lag3, newxreg = data_arima3[701:721,])
+    
+    ts.plot(diff_oil_temp[700:720], pr$pred, lty=1:2, col=c("blue", "red"))
+    legend("topleft", legend = c("Actual", "Predicted"), col = 1:2, lty = 1:2)
+    
+    cat()
+    cat("AIC:", AIC(complex_model_lag3), "BIC:", BIC(complex_model_lag3), "p:", i, "q:", j,"\n")
+    cat()
+  }
+}
+
+```
+
+```{r}
+for(i in 1:5) {
+  for (j in 1:5){
+    complex_model_lag2 <- arima(diff_oil_temp[0:700], xreg = data_arima2[0:700,], order=c(i,0,j))
+    pr <- predict(complex_model_lag2, newxreg = data_arima2[701:721,])
+    
+    ts.plot(diff_oil_temp[700:720], pr$pred, lty=1:2, col=c("blue", "red"))
+    legend("topleft", legend = c("Actual", "Predicted"), col = 1:2, lty = 1:2)
+    
+    cat()
+    cat("AIC:", AIC(complex_model_lag2), "BIC:", BIC(complex_model_lag2), "p:", i, "q:", j,"\n")
+    cat()
+  }
+}
+
+```
+
+
+```{r}
+for(i in 1:5) {
+  for (j in 1:5){
+    average_model_lag1 <- arima(diff_oil_temp[0:700], xreg = data_arima1[0:700,], order=c(i,0,j))
+    pr <- predict(average_model_lag1, newxreg = data_arima1[701:721,])
+    
+    ts.plot(diff_oil_temp[700:720], pr$pred, lty=1:2, col=c("blue", "red"))
+    legend("topleft", legend = c("Actual", "Predicted"), col = 1:2, lty = 1:2)
+    
+    cat()
+    cat("AIC:", AIC(average_model_lag1), "BIC:", BIC(average_model_lag1), "p:", i, "q:", j,"\n")
+    cat()
+  }
+}
+
+```
+
+
+```{r}
+for(i in 1:5) {
+  for (j in 1:5){
+    simple_model <- arima(diff_oil_temp[0:700], order=c(i,0,j))
+    cat()
+    cat("AIC:", AIC(simple_model), "BIC:", BIC(simple_model), "p:", i, "q:", j,"\n")
+    cat()
+  }
+}
+
+```
+
+
+```{r}
+#Ran loop to check which order is best
+complex_model_lag4 <- arima(diff_oil_temp[0:700], xreg = data_arima4[0:700,], order=c(3,0,4))
+complex_model_lag3 <- arima(diff_oil_temp[0:700], xreg = data_arima3[0:700,], order=c(3,0,5))
+complex_model_lag2 <- arima(diff_oil_temp[0:700], xreg = data_arima2[0:700,], order=c(4,0,4))
+average_model_lag1 <- arima(diff_oil_temp[0:700], xreg = data_arima1[0:700,], order=c(3,0,3))
+simple_model <- arima(diff_oil_temp[0:700], order=c(5,0,4))
+
+AIC(complex_model_lag4)
+BIC(complex_model_lag4)
+AIC(complex_model_lag3)
+BIC(complex_model_lag3)
+AIC(complex_model_lag2)
+BIC(complex_model_lag2)
+AIC(average_model_lag1)
+BIC(average_model_lag1)
+AIC(simple_model)
+BIC(simple_model)
+
+```
+
+
+```{r}
+#Residuals are independent
+complex_resids <- residuals(complex_model_lag2)
+Box.test(complex_resids,lag=5)
+
+plot(complex_resids, ylab='Residuals',main='Residual plot for complex model 2')
+
+```
+
+```{r}
+#ACF shows spike only at lag 0
+acf(complex_resids, 10, main = "ACF of Complex Model 2 Residuals")
+
+# The spectral analysis shows random walk
+spectrum(complex_resids,log='no')
+
+#The model is a good fit
+
+```
+
+```{r}
+pr <- predict(complex_model_lag2, newxreg = data_arima2[701:721,])
+
+ts.plot(diff_oil_temp[700:720], pr$pred, lty=1:2, col=c("blue", "red"),
+        ylab='Oil Temperature Difference', main='Actual Vs Predicted')
+legend("topleft", legend = c("Actual", "Predicted"), col = 1:2, lty = 1:2, cex = 0.7)
+
+```
+
+```{r}
+print(complex_model_lag2)
+
+```
+
+```{r}
+# Calculating model metrics
+errors <- diff_oil_temp[700:720] - pr$pred
+mae <- mean(abs(errors))
+mse <- mean(errors^2)
+rmse <- sqrt(mse)
+
+cat("MAE:", round(mae, 2), "\n")
+cat("MSE:", round(mse, 2), "\n")
+cat("RMSE:", round(rmse, 2), "\n")
+
+```
+
+```{r}
+test_ts <- ts(diff_oil_temp[700:720], start = 1, end = 21)
+pred_ts <- ts(pr$pred, start = 1, end = 21)
+accuracy(pred_ts, test_ts)
+
+```
+
+```{r}
+coeftest(complex_model_lag2)
+
+```
+
